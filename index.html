@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Diligent Global — Infrastructure Blueprint</title>
+<style>
+  :root{
+    --navy:#0b2545; --blue:#4fc3f7; --bg:#f4f6f9; --card:#ffffff;
+    --text:#1c2733; --muted:#5c6b7a; --border:#d3dbe3;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px); height:100%;}
+  body{
+    margin:0; font-family:'Segoe UI',Arial,sans-serif; background:var(--bg); color:var(--text);
+    min-height:100%; display:flex; flex-direction:column;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0f1720; --card:#17212e; --text:#e6edf3; --muted:#9aa8b6; --border:#2c3a48;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f1720; --card:#17212e; --text:#e6edf3; --muted:#9aa8b6; --border:#2c3a48;
+  }
+  .nav{background:var(--navy); color:#fff; padding:16px 22px;}
+  .nav-top{display:flex; align-items:center; justify-content:space-between;}
+  .nav .logo{font-weight:800; letter-spacing:.4px; font-size:18px;}
+  .nav span{color:var(--blue); font-weight:400;}
+  .nav .tag{font-size:10.5px; opacity:.7; letter-spacing:.4px; margin-top:1px;}
+  .nav-links{display:flex; gap:16px; margin-top:10px; font-size:11px; opacity:.85; overflow-x:auto; white-space:nowrap; padding-bottom:2px;}
+  .nav-links span{color:#fff; font-weight:400; opacity:.85;}
+  .footer{background:var(--navy); color:#cdd8e3; padding:26px 22px 20px; margin-top:0; font-size:12px;}
+  .footer .flogo{color:#fff; font-weight:800; font-size:15px; margin-bottom:10px;}
+  .footer .flogo span{color:var(--blue); font-weight:400;}
+  .footer-links{display:flex; flex-wrap:wrap; gap:10px 16px; margin-bottom:16px;}
+  .footer-links a{color:#cdd8e3; text-decoration:none;}
+  .footer hr{border:none; border-top:1px solid rgba(255,255,255,0.15); margin:14px 0;}
+  .footer .copy{opacity:.7; font-size:11px;}
+  .wrap{max-width:560px; margin:0 auto; padding:0 16px 28px; margin-top:24px;}
+  .card{background:var(--card); border-radius:16px; box-shadow:0 8px 28px rgba(11,37,69,0.10); padding:32px 26px; border:1px solid rgba(11,37,69,0.04);}
+  .progress{height:8px; background:var(--border); border-radius:4px; margin-bottom:24px; overflow:hidden;}
+  .progress-fill{height:100%; background:linear-gradient(90deg,var(--blue),var(--navy)); border-radius:4px; transition:width .3s;}
+  h1{font-size:24px; color:var(--navy); margin:0 0 10px; letter-spacing:-.2px;}
+  h2{font-size:21px; color:var(--navy); margin:0 0 16px; letter-spacing:-.2px; font-weight:700;}
+  p.sub{color:var(--muted); font-size:14px; line-height:1.6; margin-bottom:20px;}
+  label{display:block; font-size:13px; font-weight:600; margin:16px 0 6px;}
+  input[type=text],input[type=number],select,textarea{
+    width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; font-size:15px;
+    background:var(--bg); color:var(--text);
+  }
+  textarea{min-height:70px; resize:vertical;}
+  .opts{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px;}
+  .opt{border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:13px; cursor:pointer; background:var(--bg); user-select:none;}
+  .opt.sel{border-color:var(--blue); background:rgba(79,195,247,0.15);}
+  .btnrow{display:flex; justify-content:space-between; margin-top:26px; gap:10px;}
+  button{padding:13px 22px; border-radius:8px; font-size:15px; font-weight:600; border:none; cursor:pointer;}
+  .primary{background:var(--navy); color:#fff; flex:1;}
+  .secondary{background:transparent; color:var(--navy); border:1px solid var(--border);}
+  :root[data-theme="dark"] .secondary, @media (prefers-color-scheme: dark){ .secondary{color:var(--text);} }
+  .center{text-align:center;}
+  .spinner{width:50px; height:50px; border:5px solid var(--border); border-top:5px solid var(--navy); border-radius:50%; margin:20px auto; animation:spin 1s linear infinite;}
+  @keyframes spin{100%{transform:rotate(360deg);}}
+  .result-card{border:1px solid var(--border); border-radius:12px; padding:18px 18px 16px; margin-bottom:14px; background:var(--bg);}
+  .result-card h3{color:var(--navy); font-size:15px; margin:0 0 10px; display:flex; align-items:center; gap:8px;}
+  .result-card div{font-size:14px; line-height:1.75; white-space:pre-wrap; color:var(--text);}
+  .badge{display:inline-block; background:rgba(79,195,247,0.2); color:var(--navy); font-size:11px; font-weight:700; padding:5px 12px; border-radius:20px; margin-bottom:14px; letter-spacing:.3px;}
+  .disclaimer{font-size:12px; color:var(--muted); margin-top:16px; line-height:1.5; text-align:center;}
+  :root[data-theme="dark"] .badge{color:var(--blue);}
+  .err{color:#c0392b; font-size:13px; margin-top:10px;}
+  .step-label{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px;}
+</style>
+</head>
+<body>
+<div class="nav">
+  <div class="nav-top">
+    <div>
+      <div class="logo">DILIGENT<span> GLOBAL</span></div>
+      <div class="tag">CONSULTING WITH COMMITMENT</div>
+    </div>
+  </div>
+  <div class="nav-links"><span>Services</span><span>Solutions</span><span>Products</span><span>Industries</span><span>About Us</span><span>Contact Us</span></div>
+</div>
+<div class="wrap"><div class="card" id="app"></div></div>
+<div class="footer">
+  <div class="flogo">DILIGENT<span> GLOBAL</span></div>
+  <div class="footer-links">
+    <a href="#">Services</a><a href="#">Products</a><a href="#">SAP</a><a href="#">Microsoft</a>
+    <a href="#">About Us</a><a href="#">Careers</a><a href="#">Case Studies</a><a href="#">Contact Us</a>
+  </div>
+  <hr>
+  <div class="copy">Copyright © 2026 Diligent &nbsp;|&nbsp; Privacy Policy &nbsp;|&nbsp; Terms of Use</div>
+</div>
+
+<script>
+const state = {
+  step: 0,
+  data: {
+    company:"", industry:"Manufacturing", website:"",
+    employees:"1 - 50", locations:"", regions:[],
+    infra:"Not sure", systems:[], compliance:[],
+    drivers:[], notes:""
+  },
+  result: null,
+  loading: false,
+  error: null
+};
+
+function toggle(arr, val){
+  const i = arr.indexOf(val);
+  if(i>-1) arr.splice(i,1); else arr.push(val);
+  render();
+}
+
+function optBox(label, selected, onclick){
+  return `<div class="opt ${selected?'sel':''}" onclick="${onclick}">${selected?'☑':'☐'} ${label}</div>`;
+}
+
+function render(){
+  const app = document.getElementById('app');
+  const pct = [20,40,60,80,100][state.step] || 0;
+  const d = state.data;
+
+  if(state.step <= 4){
+    let body = '';
+    if(state.step===0){
+      body = `
+        <label>Company Name</label>
+        <input id="f_company" type="text" value="${d.company}" placeholder="e.g. Acme Textiles Pvt. Ltd." oninput="state.data.company=this.value">
+        <label>Industry</label>
+        <select onchange="state.data.industry=this.value">
+          ${["Manufacturing","Retail","Healthcare","Finance","Technology","Other"].map(o=>`<option ${d.industry===o?'selected':''}>${o}</option>`).join('')}
+        </select>
+        <label>Website (optional)</label>
+        <input type="text" value="${d.website}" placeholder="www.yourcompany.com" oninput="state.data.website=this.value">
+      `;
+    } else if(state.step===1){
+      body = `
+        <label>Number of Employees</label>
+        <select onchange="state.data.employees=this.value">
+          ${["1 - 50","51 - 200","201 - 1000","1000+"].map(o=>`<option ${d.employees===o?'selected':''}>${o}</option>`).join('')}
+        </select>
+        <label>Number of Office Locations</label>
+        <input type="number" value="${d.locations}" placeholder="e.g. 3" oninput="state.data.locations=this.value">
+        <label>Regions of Operation</label>
+        <div class="opts">
+          ${["North America","Europe","Asia","Other"].map(r=>optBox(r, d.regions.includes(r), `toggle(state.data.regions,'${r}')`)).join('')}
+        </div>
+      `;
+    } else if(state.step===2){
+      body = `
+        <label>Current Infrastructure</label>
+        <div class="opts">
+          ${["Fully on-prem","Hybrid","Fully cloud","Not sure"].map(o=>`<div class="opt ${d.infra===o?'sel':''}" onclick="state.data.infra='${o}';render()">${d.infra===o?'●':'○'} ${o}</div>`).join('')}
+        </div>
+        <label>Existing Systems in Use</label>
+        <div class="opts">
+          ${["ERP","CRM","Email/Collaboration","Endpoint Management"].map(s=>optBox(s, d.systems.includes(s), `toggle(state.data.systems,'${s}')`)).join('')}
+        </div>
+        <label>Compliance Requirements</label>
+        <div class="opts">
+          ${["HIPAA","GDPR","SOC 2","Not sure"].map(c=>optBox(c, d.compliance.includes(c), `toggle(state.data.compliance,'${c}')`)).join('')}
+        </div>
+      `;
+    } else if(state.step===3){
+      body = `
+        <label>What's driving this project?</label>
+        <div class="opts">
+          ${["Scaling up","Security concerns","Cost optimization","Modernization"].map(g=>optBox(g, d.drivers.includes(g), `toggle(state.data.drivers,'${g}')`)).join('')}
+        </div>
+        <label>Anything else we should know?</label>
+        <textarea oninput="state.data.notes=this.value" placeholder="e.g. Planning to double headcount next year...">${d.notes}</textarea>
+      `;
+    } else if(state.step===4){
+      body = `
+        <p class="sub">Review your answers, then generate your blueprint.</p>
+        <div style="font-size:14px; line-height:1.8; color:var(--muted);">
+          <b style="color:var(--text)">${d.company||'(no name)'}</b> — ${d.industry}<br>
+          ${d.employees} employees, ${d.locations||'?'} location(s)<br>
+          Regions: ${d.regions.join(', ')||'—'}<br>
+          Infrastructure: ${d.infra}<br>
+          Systems: ${d.systems.join(', ')||'—'}<br>
+          Compliance: ${d.compliance.join(', ')||'—'}<br>
+          Drivers: ${d.drivers.join(', ')||'—'}
+        </div>
+      `;
+    }
+
+    const titles = ["Let's start with the basics","Tell us about your footprint","What does your current setup look like?","What's driving this project?","Review &amp; generate"];
+    app.innerHTML = `
+      <div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="step-label">Step ${state.step+1} of 5</div>
+      <h2>${titles[state.step]}</h2>
+      ${body}
+      <div class="btnrow">
+        ${state.step>0 ? `<button class="secondary" onclick="state.step--;render()">Back</button>` : `<div></div>`}
+        <button class="primary" onclick="${state.step<4 ? 'state.step++;render()' : 'generate()'}">${state.step<4 ? 'Next →' : 'Generate My Blueprint →'}</button>
+      </div>
+    `;
+    return;
+  }
+
+  if(state.step===5){
+    if(state.loading){
+      app.innerHTML = `
+        <div class="center">
+          <div class="progress"><div class="progress-fill" style="width:100%"></div></div>
+          <div class="spinner"></div>
+          <h2>Analyzing ${d.company||'your business'}...</h2>
+          <p class="sub">Our AI is building a tailored infrastructure recommendation.</p>
+          ${state.error ? `<div class="err">${state.error}</div>` : ''}
+        </div>
+      `;
+      return;
+    }
+    if(state.result){
+      app.innerHTML = `
+        <div class="badge">BLUEPRINT READY</div>
+        <h2>Here's what ${d.company||'your company'} will need</h2>
+        <div class="result-card"><h3>🖥️ Recommended Infrastructure</h3><div>${state.result.infrastructure}</div></div>
+        <div class="result-card"><h3>🧩 Required Applications</h3><div>${state.result.applications}</div></div>
+        <div class="result-card"><h3>⏱️ Estimated Timeline</h3><div>${state.result.timeline}</div></div>
+        <button class="secondary" style="width:100%" onclick="state.step=0;state.result=null;render()">Start Over</button>
+        <p class="disclaimer">This is an initial, automated estimate based on the details you provided — not a final scope. A Diligent consultant will refine this with you.</p>
+      `;
+      return;
+    }
+  }
+}
+
+async function generate(){
+  state.step = 5; state.loading = true; state.error = null; render();
+  const d = state.data;
+  const prompt = `You are an IT infrastructure advisor for Diligent Global, an IT managed services provider. You are writing directly to a business owner or operations leader who is NOT technical — no IT background at all. Based on the company profile below, generate a clear, friendly, plain-language infrastructure recommendation. Avoid jargon; when you must use a technical term (e.g. "VPN", "endpoint management"), briefly explain what it means and why it matters to them in everyday business terms (cost of downtime, security risk, staff productivity, etc). Do not mention cost or pricing.
+
+Company: ${d.company}
+Industry: ${d.industry}
+Employees: ${d.employees}
+Locations: ${d.locations}
+Regions: ${d.regions.join(', ')}
+Current infrastructure: ${d.infra}
+Existing systems: ${d.systems.join(', ')}
+Compliance needs: ${d.compliance.join(', ')}
+Project drivers: ${d.drivers.join(', ')}
+Additional context: ${d.notes}
+
+Respond ONLY as JSON, no markdown fences, no preamble, in this exact shape:
+{"infrastructure":"4-5 bullet points as plain text separated by newlines, each starting with -. Each bullet: name the recommendation in plain words, then one short sentence explaining why it fits this business.","applications":"4-6 bullet points as plain text separated by newlines, each starting with -. Each bullet: the tool/system category in plain words, then one short sentence on what problem it solves for them day to day.","timeline":"3-4 phases as plain text separated by newlines, each starting with -, format: Phase name (duration) — one short sentence in plain words on what happens and what the business will notice."}`;
+
+  try{
+    const res = await fetch("/.netlify/functions/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt })
+    });
+    if(!res.ok){
+      const errBody = await res.text();
+      throw new Error("Server returned " + res.status + ": " + errBody);
+    }
+    const json = await res.json();
+    state.result = json;
+    state.loading = false;
+    render();
+  } catch(e){
+    state.loading = false;
+    state.error = "Something went wrong generating your blueprint: " + (e.message || "unknown error");
+    render();
+  }
+}
+
+render();
+</script>
+</body>
+</html>
