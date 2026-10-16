@@ -67,11 +67,31 @@
   .result-card{border:1px solid var(--border); border-radius:12px; padding:18px 18px 16px; margin-bottom:14px; background:var(--bg);}
   .result-card h3{color:var(--navy); font-size:15px; margin:0 0 10px; display:flex; align-items:center; gap:8px;}
   .result-card div{font-size:14px; line-height:1.75; white-space:pre-wrap; color:var(--text);}
+  .result-card ul.blt{margin:0; padding-left:18px; white-space:normal;}
+  .result-card ul.blt li{margin-bottom:8px;}
   .badge{display:inline-block; background:rgba(79,195,247,0.2); color:var(--navy); font-size:11px; font-weight:700; padding:5px 12px; border-radius:20px; margin-bottom:14px; letter-spacing:.3px;}
   .disclaimer{font-size:12px; color:var(--muted); margin-top:16px; line-height:1.5; text-align:center;}
   :root[data-theme="dark"] .badge{color:var(--blue);}
   .err{color:#c0392b; font-size:13px; margin-top:10px;}
   .step-label{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px;}
+  .card{position:relative; overflow:hidden;}
+  .card::before{content:""; position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg,var(--blue),var(--navy));}
+  .dots{display:flex; justify-content:space-between; margin-bottom:22px;}
+  .dot-item{flex:1; text-align:center; position:relative;}
+  .dot-item:not(:last-child)::after{content:""; position:absolute; top:11px; left:55%; width:90%; height:2px; background:var(--border);}
+  .dot-item.done:not(:last-child)::after{background:var(--blue);}
+  .dot{width:24px; height:24px; border-radius:50%; background:var(--border); color:var(--muted); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; margin:0 auto 5px; position:relative; z-index:1;}
+  .dot-item.active .dot{background:var(--navy); color:#fff;}
+  .dot-item.done .dot{background:var(--blue); color:#fff;}
+  .dot-label{font-size:9.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.3px;}
+  .effort-table{width:100%; border-collapse:collapse; font-size:13px; margin-top:6px;}
+  .effort-table td{padding:7px 0; border-bottom:1px solid var(--border);}
+  .effort-table td:last-child{text-align:right; font-weight:600; color:var(--navy);}
+  .stat-row{display:flex; gap:12px; margin-bottom:14px;}
+  .stat-box{flex:1; background:rgba(79,195,247,0.12); border-radius:10px; padding:12px; text-align:center;}
+  .stat-box .num{font-size:20px; font-weight:800; color:var(--navy);}
+  .stat-box .lbl{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.3px; margin-top:2px;}
+  .methodology{font-size:11px; color:var(--muted); margin-top:10px; line-height:1.5;}
 </style>
 </head>
 <body>
@@ -102,17 +122,44 @@ const state = {
     company:"", industry:"Manufacturing", website:"",
     employees:"1 - 50", locations:"", regions:[],
     infra:"Not sure", systems:[], compliance:[],
-    drivers:[], notes:""
+    drivers:[], notes:"",
+    endpoints:"100-500", itTeam:"1-5 people", urgency:"Standard pace", engagement:"Not sure yet"
   },
   result: null,
   loading: false,
-  error: null
+  error: null,
+  stepError: null
 };
+
+function validateCurrentStep(){
+  const d = state.data;
+  if(state.step===0){
+    if(!d.company.trim()) return "Please enter your company name.";
+  } else if(state.step===1){
+    if(!d.locations || parseInt(d.locations)<1) return "Please enter the number of office locations.";
+    if(d.regions.length===0) return "Please select at least one region.";
+  } else if(state.step===3){
+    if(d.drivers.length===0) return "Please select at least one project driver.";
+  }
+  return null;
+}
+
+function goNext(){
+  const err = validateCurrentStep();
+  if(err){ state.stepError = err; render(); return; }
+  state.stepError = null;
+  if(state.step<5){ state.step++; render(); } else { generate(); }
+}
 
 function toggle(arr, val){
   const i = arr.indexOf(val);
   if(i>-1) arr.splice(i,1); else arr.push(val);
   render();
+}
+
+function bulletsToHtml(text){
+  const lines = (text||'').split('\n').map(l=>l.trim()).filter(l=>l);
+  return '<ul class="blt">' + lines.map(l=>'<li>'+l.replace(/^-\s*/,'')+'</li>').join('') + '</ul>';
 }
 
 function optBox(label, selected, onclick){
@@ -124,7 +171,7 @@ function render(){
   const pct = [20,40,60,80,100][state.step] || 0;
   const d = state.data;
 
-  if(state.step <= 4){
+  if(state.step <= 5){
     let body = '';
     if(state.step===0){
       body = `
@@ -176,6 +223,25 @@ function render(){
       `;
     } else if(state.step===4){
       body = `
+        <label>Approx. Number of Devices / Endpoints</label>
+        <div class="opts">
+          ${["Under 100","100-500","500-2,000","2,000+"].map(o=>`<div class="opt ${d.endpoints===o?'sel':''}" onclick="state.data.endpoints='${o}';render()">${d.endpoints===o?'●':'○'} ${o}</div>`).join('')}
+        </div>
+        <label>Current In-House IT Team Size</label>
+        <div class="opts">
+          ${["No dedicated IT","1-5 people","6-20 people","20+ people"].map(o=>`<div class="opt ${d.itTeam===o?'sel':''}" onclick="state.data.itTeam='${o}';render()">${d.itTeam===o?'●':'○'} ${o}</div>`).join('')}
+        </div>
+        <label>Target Timeline</label>
+        <div class="opts">
+          ${["Standard pace","Accelerated / urgent"].map(o=>`<div class="opt ${d.urgency===o?'sel':''}" onclick="state.data.urgency='${o}';render()">${d.urgency===o?'●':'○'} ${o}</div>`).join('')}
+        </div>
+        <label>Preferred Engagement Model</label>
+        <div class="opts">
+          ${["Fully managed by Diligent","Co-managed with your IT team","Not sure yet"].map(o=>`<div class="opt ${d.engagement===o?'sel':''}" onclick="state.data.engagement='${o}';render()">${d.engagement===o?'●':'○'} ${o}</div>`).join('')}
+        </div>
+      `;
+    } else if(state.step===5){
+      body = `
         <p class="sub">Review your answers, then generate your blueprint.</p>
         <div style="font-size:14px; line-height:1.8; color:var(--muted);">
           <b style="color:var(--text)">${d.company||'(no name)'}</b> — ${d.industry}<br>
@@ -184,26 +250,31 @@ function render(){
           Infrastructure: ${d.infra}<br>
           Systems: ${d.systems.join(', ')||'—'}<br>
           Compliance: ${d.compliance.join(', ')||'—'}<br>
-          Drivers: ${d.drivers.join(', ')||'—'}
+          Drivers: ${d.drivers.join(', ')||'—'}<br>
+          Endpoints: ${d.endpoints} &nbsp;|&nbsp; In-house IT: ${d.itTeam}<br>
+          Timeline: ${d.urgency} &nbsp;|&nbsp; Engagement: ${d.engagement}
         </div>
       `;
     }
 
-    const titles = ["Let's start with the basics","Tell us about your footprint","What does your current setup look like?","What's driving this project?","Review &amp; generate"];
+    const titles = ["Let's start with the basics","Tell us about your footprint","What does your current setup look like?","What's driving this project?","Scale &amp; delivery preferences","Review &amp; generate"];
+    const dotLabels = ["Basics","Footprint","Setup","Goals","Scale","Review"];
     app.innerHTML = `
-      <div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div>
-      <div class="step-label">Step ${state.step+1} of 5</div>
+      <div class="dots">
+        ${dotLabels.map((l,i)=>`<div class="dot-item ${i<state.step?'done':''} ${i===state.step?'active':''}"><div class="dot">${i<state.step?'✓':i+1}</div><div class="dot-label">${l}</div></div>`).join('')}
+      </div>
       <h2>${titles[state.step]}</h2>
+      ${state.stepError ? `<div class="err">${state.stepError}</div>` : ''}
       ${body}
       <div class="btnrow">
-        ${state.step>0 ? `<button class="secondary" onclick="state.step--;render()">Back</button>` : `<div></div>`}
-        <button class="primary" onclick="${state.step<4 ? 'state.step++;render()' : 'generate()'}">${state.step<4 ? 'Next →' : 'Generate My Blueprint →'}</button>
+        ${state.step>0 ? `<button class="secondary" onclick="state.stepError=null;state.step--;render()">Back</button>` : `<div></div>`}
+        <button class="primary" onclick="goNext()">${state.step<5 ? 'Next →' : 'Generate My Blueprint →'}</button>
       </div>
     `;
     return;
   }
 
-  if(state.step===5){
+  if(state.step===6){
     if(state.loading){
       app.innerHTML = `
         <div class="center">
@@ -217,12 +288,25 @@ function render(){
       return;
     }
     if(state.result){
+      const e = state.effort;
       app.innerHTML = `
         <div class="badge">BLUEPRINT READY</div>
         <h2>Here's what ${d.company||'your company'} will need</h2>
-        <div class="result-card"><h3>🖥️ Recommended Infrastructure</h3><div>${state.result.infrastructure}</div></div>
-        <div class="result-card"><h3>🧩 Required Applications</h3><div>${state.result.applications}</div></div>
-        <div class="result-card"><h3>⏱️ Estimated Timeline</h3><div>${state.result.timeline}</div></div>
+        <div class="result-card"><h3>🖥️ Recommended Infrastructure</h3><div>${bulletsToHtml(state.result.infrastructure)}</div></div>
+        <div class="result-card"><h3>🧩 Required Applications</h3><div>${bulletsToHtml(state.result.applications)}</div></div>
+        <div class="result-card">
+          <h3>⏱️ Effort, Team &amp; Timeline</h3>
+          <div class="stat-row">
+            <div class="stat-box"><div class="num">${e.totalDays}</div><div class="lbl">Person-Days</div></div>
+            <div class="stat-box"><div class="num">${e.weeksLow}–${e.weeksHigh}</div><div class="lbl">Weeks</div></div>
+            <div class="stat-box"><div class="num">${e.peakFte}</div><div class="lbl">Peak FTEs</div></div>
+          </div>
+          <table class="effort-table">
+            ${e.roles.map(r=>`<tr><td>${r.name}</td><td>${r.fte} FTE</td></tr>`).join('')}
+          </table>
+          <div class="methodology">Phases: ${e.phases.map(p=>`${p.name} (~${p.weeks}w)`).join(', ')}. Modeled from endpoint count, locations, infrastructure type, systems and compliance scope you provided — a planning-grade estimate, refined during discovery.</div>
+        </div>
+        <button class="primary" style="width:100%; margin-bottom:10px;" id="copy_btn" onclick="copyBlueprint()">Copy Blueprint to Clipboard</button>
         <button class="secondary" style="width:100%" onclick="state.step=0;state.result=null;render()">Start Over</button>
         <p class="disclaimer">This is an initial, automated estimate based on the details you provided — not a final scope. A Diligent consultant will refine this with you.</p>
       `;
@@ -231,10 +315,107 @@ function render(){
   }
 }
 
+// Deterministic effort/FTE/timeline model — same inputs always produce the
+// same numbers, so management sees a consistent, explainable estimate
+// rather than an AI guess that varies between runs.
+function computeEffort(d){
+  const endpointFactor = {"Under 100":1, "100-500":1.8, "500-2,000":3.4, "2,000+":5.5}[d.endpoints] || 1.8;
+  const infraFactor = {"Fully cloud":0.8, "Hybrid":1.15, "Fully on-prem":1.4, "Not sure":1.2}[d.infra] || 1.2;
+  const itTeamFactor = {"No dedicated IT":1.1, "1-5 people":1.0, "6-20 people":0.95, "20+ people":0.9}[d.itTeam] || 1.0;
+  const systemsCount = d.systems.filter(s=>s!=="None").length;
+  const complianceCount = d.compliance.filter(c=>c!=="Not sure").length;
+  const systemsFactor = 1 + 0.12*systemsCount;
+  const complianceFactor = 1 + 0.18*complianceCount;
+  const locations = Math.max(1, parseInt(d.locations)||1);
+  const locationsAdd = Math.min(locations-1, 10) * 3;
+
+  const BASE_DAYS = 40;
+  const complexity = endpointFactor * infraFactor * systemsFactor * complianceFactor * itTeamFactor;
+  const totalDays = Math.round(BASE_DAYS * complexity + locationsAdd);
+
+  const phaseSplit = [
+    {key:"discovery", name:"Discovery & Design", pct:0.15},
+    {key:"build", name:"Core Infrastructure Build", pct:0.35},
+    {key:"rollout", name:"Application Rollout & Integration", pct:0.25},
+    {key:"testing", name:"Testing & Cutover", pct:0.15},
+    {key:"hypercare", name:"Hypercare", pct:0.10}
+  ];
+  // Each role is only staffed during the phases it's actually needed for —
+  // spreading its effort across those phases only (not the whole project)
+  // gives a realistic FTE instead of an artificially diluted fraction.
+  const roleSplit = [
+    {name:"Project Manager", pct:0.12, phases:["discovery","build","rollout","testing","hypercare"]},
+    {name:"Infrastructure Engineer", pct:0.32, phases:["discovery","build","testing"]},
+    {name:"Security / Compliance Specialist", pct:0.16, phases:["discovery","build","testing"]},
+    {name:"Application Specialist", pct:0.25, phases:["build","rollout","testing"]},
+    {name:"Change & Training Lead", pct:0.15, phases:["rollout","testing","hypercare"]}
+  ];
+
+  let weeksLow, weeksHigh;
+  if(totalDays<=30){ weeksLow=4; weeksHigh=6; }
+  else if(totalDays<=80){ weeksLow=8; weeksHigh=12; }
+  else if(totalDays<=160){ weeksLow=12; weeksHigh=18; }
+  else { weeksLow=18; weeksHigh=26; }
+  if(d.urgency==="Accelerated / urgent"){ weeksLow=Math.round(weeksLow*0.75); weeksHigh=Math.round(weeksHigh*0.75); }
+
+  const avgWeeks = (weeksLow+weeksHigh)/2;
+  const phaseWeeks = {};
+  phaseSplit.forEach(p=>{ phaseWeeks[p.key] = Math.max(1, Math.round(avgWeeks*p.pct)); });
+
+  const round4 = n => Math.round(n*4)/4; // staff in realistic quarter-FTE increments
+
+  const roles = roleSplit.map(r=>{
+    const roleDays = totalDays*r.pct;
+    const activeWeeks = r.phases.reduce((s,k)=>s+phaseWeeks[k],0);
+    const activeDays = activeWeeks*5;
+    const fte = Math.max(0.25, round4(roleDays/activeDays));
+    return {name:r.name, fte:fte.toFixed(2).replace(/\.?0+$/,'').replace(/^(\d+)$/,'$1.0'), fteNum:fte, phases:r.phases};
+  });
+
+  // Peak team size = busiest single phase, by summing FTEs of roles active then
+  let peakFte = 0;
+  phaseSplit.forEach(p=>{
+    const teamInPhase = roles.filter(r=>r.phases.includes(p.key)).reduce((s,r)=>s+r.fteNum,0);
+    if(teamInPhase>peakFte) peakFte = teamInPhase;
+  });
+  peakFte = round4(peakFte).toFixed(2).replace(/\.?0+$/,'').replace(/^(\d+)$/,'$1.0');
+
+  const phases = phaseSplit.map(p=>({name:p.name, weeks:phaseWeeks[p.key]}));
+
+  return {totalDays, weeksLow, weeksHigh, peakFte, roles, phases};
+}
+
+function buildBlueprintText(){
+  const d = state.data, e = state.effort, r = state.result;
+  const strip = s => (s||'').replace(/^- /gm,'\u2022 ');
+  return `Infrastructure Blueprint for ${d.company||'your company'}\n\n`
+    + `RECOMMENDED INFRASTRUCTURE\n${strip(r.infrastructure)}\n\n`
+    + `REQUIRED APPLICATIONS\n${strip(r.applications)}\n\n`
+    + `EFFORT, TEAM & TIMELINE\n`
+    + `Total effort: ${e.totalDays} person-days\nDuration: ${e.weeksLow}\u2013${e.weeksHigh} weeks\nPeak team size: ${e.peakFte} FTEs\n\n`
+    + `Team breakdown:\n${e.roles.map(x=>`\u2022 ${x.name}: ${x.fte} FTE`).join('\n')}\n\n`
+    + `Phases: ${e.phases.map(p=>`${p.name} (~${p.weeks}w)`).join(', ')}\n\n`
+    + `This is an initial, automated estimate \u2014 not a final scope. A Diligent consultant will refine this with you.\n\n`
+    + `\u2014 Diligent Global`;
+}
+
+async function copyBlueprint(){
+  const btn = document.getElementById('copy_btn');
+  try{
+    await navigator.clipboard.writeText(buildBlueprintText());
+    btn.textContent = 'Copied \u2713';
+    setTimeout(()=>{ btn.textContent='Copy Blueprint to Clipboard'; }, 2000);
+  } catch(e){
+    btn.textContent = 'Copy failed \u2014 select text manually';
+  }
+}
+
 async function generate(){
-  state.step = 5; state.loading = true; state.error = null; render();
+  state.step = 6; state.loading = true; state.error = null; render();
   const d = state.data;
-  const prompt = `You are an IT infrastructure advisor for Diligent Global, an IT managed services provider. You are writing directly to a business owner or operations leader who is NOT technical — no IT background at all. Based on the company profile below, generate a clear, friendly, plain-language infrastructure recommendation. Avoid jargon; when you must use a technical term (e.g. "VPN", "endpoint management"), briefly explain what it means and why it matters to them in everyday business terms (cost of downtime, security risk, staff productivity, etc). Do not mention cost or pricing.
+  state.effort = computeEffort(d);
+
+  const prompt = `You are an IT infrastructure advisor for Diligent Global, an IT managed services provider. You are writing directly to a business owner or operations leader who is NOT technical — no IT background at all. Based on the company profile below, generate a clear, friendly, plain-language infrastructure recommendation. Avoid jargon; when you must use a technical term (e.g. "VPN", "endpoint management"), briefly explain what it means and why it matters to them in everyday business terms (cost of downtime, security risk, staff productivity, etc). Do not mention cost, pricing, effort, timeline, or team size — that is handled separately.
 
 Company: ${d.company}
 Industry: ${d.industry}
@@ -245,10 +426,12 @@ Current infrastructure: ${d.infra}
 Existing systems: ${d.systems.join(', ')}
 Compliance needs: ${d.compliance.join(', ')}
 Project drivers: ${d.drivers.join(', ')}
+Approx. endpoints: ${d.endpoints}
+Engagement model preference: ${d.engagement}
 Additional context: ${d.notes}
 
 Respond ONLY as JSON, no markdown fences, no preamble, in this exact shape:
-{"infrastructure":"4-5 bullet points as plain text separated by newlines, each starting with -. Each bullet: name the recommendation in plain words, then one short sentence explaining why it fits this business.","applications":"4-6 bullet points as plain text separated by newlines, each starting with -. Each bullet: the tool/system category in plain words, then one short sentence on what problem it solves for them day to day.","timeline":"3-4 phases as plain text separated by newlines, each starting with -, format: Phase name (duration) — one short sentence in plain words on what happens and what the business will notice."}`;
+{"infrastructure":"4-5 bullet points as plain text separated by newlines, each starting with -. Each bullet: name the recommendation in plain words, then one short sentence explaining why it fits this business.","applications":"4-6 bullet points as plain text separated by newlines, each starting with -. Each bullet: the tool/system category in plain words, then one short sentence on what problem it solves for them day to day."}`;
 
   try{
     const res = await fetch("/.netlify/functions/generate", {
